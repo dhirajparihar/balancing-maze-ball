@@ -293,13 +293,13 @@ class BalanceRunnerGame extends Game {
     if (pointerId == leftPointerId) {
       final dy = worldY - lastTouchLeftY;
       // Dragging left thumb DOWN tilts left side downward (negative tilt)
-      targetTilt = (targetTilt - dy * 0.042 * sensitivity).clamp(-maxTiltAngle, maxTiltAngle);
+      targetTilt = (targetTilt - dy * 0.080 * sensitivity).clamp(-maxTiltAngle, maxTiltAngle);
       lastTouchLeftY = worldY;
       leftThumbWorldPos = Vector2(worldX, worldY);
     } else if (pointerId == rightPointerId) {
       final dy = worldY - lastTouchRightY;
       // Dragging right thumb DOWN tilts right side downward (positive tilt)
-      targetTilt = (targetTilt + dy * 0.042 * sensitivity).clamp(-maxTiltAngle, maxTiltAngle);
+      targetTilt = (targetTilt + dy * 0.080 * sensitivity).clamp(-maxTiltAngle, maxTiltAngle);
       lastTouchRightY = worldY;
       rightThumbWorldPos = Vector2(worldX, worldY);
     }
@@ -322,20 +322,25 @@ class BalanceRunnerGame extends Game {
 
     runTime += dt;
 
-    // 1. Lever Bar Tilt Physics
+    // 1. Lever Bar Tilt Physics (Snappy & Instantaneous Follow)
     // Ease bar back slightly towards 0 when not dragging
     if (!isLeftDragging && !isRightDragging) {
-      targetTilt += (0.0 - targetTilt) * min(1.0, 3.2 * dt);
+      targetTilt += (0.0 - targetTilt) * min(1.0, 3.5 * dt);
     }
-    barTilt += (targetTilt - barTilt) * min(1.0, 18.0 * dt);
+    final previousTilt = barTilt;
+    barTilt += (targetTilt - barTilt) * min(1.0, 32.0 * dt);
+    final tiltDelta = barTilt - previousTilt;
 
-    // 2. Ball Physics on Inclined Lever
+    // 2. Ball Physics on Inclined Lever (Snappy & Fast Reaction)
     if (!isFallingOff && !isSinkingInHole) {
-      const double gravityG = 38.0; // Responsive gravity along incline
-      const double friction = 0.982;
+      const double gravityG = 92.0; // Powerful reactive gravity along incline
+      const double friction = 0.992; // Polished steel bearing low friction
 
       final double inclineAcc = sin(barTilt) * gravityG;
-      ballVelocity = (ballVelocity + inclineAcc * dt) * pow(friction, dt * 60);
+      // Dynamic flick impulse from bar angular rotation
+      final double flickImpulse = (tiltDelta / max(0.001, dt)) * 0.35;
+
+      ballVelocity = (ballVelocity + (inclineAcc + flickImpulse) * dt) * pow(friction, dt * 60);
       ballPosAlongBar += ballVelocity * dt;
 
       // End-collar bumper constraints: keep the ball securely on the bar

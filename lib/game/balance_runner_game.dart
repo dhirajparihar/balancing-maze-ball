@@ -101,10 +101,15 @@ class BalanceRunnerGame extends Game {
 
   double barTilt = 0.0; // Current angle in radians
   double targetTilt = 0.0;
-  bool isLeftDragging = false;
-  bool isRightDragging = false;
+  int? leftPointerId;
+  int? rightPointerId;
   double lastTouchLeftY = 0.0;
   double lastTouchRightY = 0.0;
+  Vector2? leftThumbWorldPos;
+  Vector2? rightThumbWorldPos;
+
+  bool get isLeftDragging => leftPointerId != null;
+  bool get isRightDragging => rightPointerId != null;
 
   // Ball
   static const double ballRadius = 1.55;
@@ -253,53 +258,61 @@ class BalanceRunnerGame extends Game {
     );
   }
 
-  // ---- Lever Drag Controls ----
+  // ---- Lever Drag Controls (Simultaneous Dual-Thumb Multi-Touch) ----
 
-  void handlePointerDown(Offset localPosition) {
+  void handlePointerDown(int pointerId, Offset localPosition) {
     if (state != RunnerState.playing) return;
     final worldX = (localPosition.dx - viewOffset.x) / viewScale;
     final worldY = (localPosition.dy - viewOffset.y) / viewScale;
 
     if (worldX < barPivotX) {
-      isLeftDragging = true;
+      // Left thumb touched
+      leftPointerId = pointerId;
       lastTouchLeftY = worldY;
+      leftThumbWorldPos = Vector2(worldX, worldY);
+      if (gameService.playerData.vibrationEnabled) {
+        HapticFeedback.selectionClick();
+      }
     } else {
-      isRightDragging = true;
+      // Right thumb touched
+      rightPointerId = pointerId;
       lastTouchRightY = worldY;
+      rightThumbWorldPos = Vector2(worldX, worldY);
+      if (gameService.playerData.vibrationEnabled) {
+        HapticFeedback.selectionClick();
+      }
     }
   }
 
-  void handlePointerMove(Offset localPosition) {
+  void handlePointerMove(int pointerId, Offset localPosition) {
     if (state != RunnerState.playing) return;
     final worldX = (localPosition.dx - viewOffset.x) / viewScale;
     final worldY = (localPosition.dy - viewOffset.y) / viewScale;
-
     final sensitivity = gameService.playerData.controlSensitivity;
 
-    if (worldX < barPivotX || isLeftDragging) {
-      if (isLeftDragging) {
-        final dy = worldY - lastTouchLeftY;
-        // Dragging left end DOWN increases left depth (negative tilt)
-        targetTilt = (targetTilt - dy * 0.045 * sensitivity).clamp(-maxTiltAngle, maxTiltAngle);
-        lastTouchLeftY = worldY;
-      }
-    }
-    if (worldX >= barPivotX || isRightDragging) {
-      if (isRightDragging) {
-        final dy = worldY - lastTouchRightY;
-        // Dragging right end DOWN tilts right end down (positive tilt)
-        targetTilt = (targetTilt + dy * 0.045 * sensitivity).clamp(-maxTiltAngle, maxTiltAngle);
-        lastTouchRightY = worldY;
-      }
+    if (pointerId == leftPointerId) {
+      final dy = worldY - lastTouchLeftY;
+      // Dragging left thumb DOWN tilts left side downward (negative tilt)
+      targetTilt = (targetTilt - dy * 0.042 * sensitivity).clamp(-maxTiltAngle, maxTiltAngle);
+      lastTouchLeftY = worldY;
+      leftThumbWorldPos = Vector2(worldX, worldY);
+    } else if (pointerId == rightPointerId) {
+      final dy = worldY - lastTouchRightY;
+      // Dragging right thumb DOWN tilts right side downward (positive tilt)
+      targetTilt = (targetTilt + dy * 0.042 * sensitivity).clamp(-maxTiltAngle, maxTiltAngle);
+      lastTouchRightY = worldY;
+      rightThumbWorldPos = Vector2(worldX, worldY);
     }
   }
 
-  void handlePointerUp(Offset localPosition) {
-    final worldX = (localPosition.dx - viewOffset.x) / viewScale;
-    if (worldX < barPivotX) {
-      isLeftDragging = false;
-    } else {
-      isRightDragging = false;
+  void handlePointerUp(int pointerId) {
+    if (pointerId == leftPointerId) {
+      leftPointerId = null;
+      leftThumbWorldPos = null;
+    }
+    if (pointerId == rightPointerId) {
+      rightPointerId = null;
+      rightThumbWorldPos = null;
     }
   }
 
@@ -503,6 +516,10 @@ class BalanceRunnerGame extends Game {
     isFallingOff = false;
     isSinkingInHole = false;
     ballWorldPos = Vector2(barPivotX, barPivotY - ballRadius);
+    leftPointerId = null;
+    rightPointerId = null;
+    leftThumbWorldPos = null;
+    rightThumbWorldPos = null;
     rng = Random(seed ?? DateTime.now().millisecondsSinceEpoch);
     _generateInitialTrack();
   }
@@ -535,7 +552,33 @@ class BalanceRunnerGame extends Game {
     // 5. Render Rolling Metallic Ball
     _renderBall(canvas);
 
+    // 6. Thumb Touch Ripple Indicators
+    if (leftThumbWorldPos != null) {
+      _renderThumbIndicator(canvas, leftThumbWorldPos!);
+    }
+    if (rightThumbWorldPos != null) {
+      _renderThumbIndicator(canvas, rightThumbWorldPos!);
+    }
+
     canvas.restore();
+  }
+
+  void _renderThumbIndicator(Canvas canvas, Vector2 pos) {
+    canvas.drawCircle(
+      Offset(pos.x, pos.y),
+      3.2,
+      Paint()
+        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.25)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
+    );
+    canvas.drawCircle(
+      Offset(pos.x, pos.y),
+      1.8,
+      Paint()
+        ..color = const Color(0xFF00E5FF).withValues(alpha: 0.6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 0.35,
+    );
   }
 
   void _renderSideRails(Canvas canvas) {

@@ -39,33 +39,15 @@ class GameplayHudOverlay extends StatelessWidget {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        // 1. Transparent Gesture Detectors for Left & Right Lever Ends
+        // 1. Full-Screen Multi-Touch Gesture Listener (Simultaneous Dual-Thumb Control)
         Positioned.fill(
-          child: Row(
-            children: [
-              // Left half gesture area
-              Expanded(
-                child: Listener(
-                  behavior: HitTestBehavior.translucent,
-                  onPointerDown: (e) => game.handlePointerDown(e.localPosition),
-                  onPointerMove: (e) => game.handlePointerMove(e.localPosition),
-                  onPointerUp: (e) => game.handlePointerUp(e.localPosition),
-                  onPointerCancel: (e) => game.handlePointerUp(e.localPosition),
-                  child: Container(color: Colors.transparent),
-                ),
-              ),
-              // Right half gesture area
-              Expanded(
-                child: Listener(
-                  behavior: HitTestBehavior.translucent,
-                  onPointerDown: (e) => game.handlePointerDown(Offset(e.localPosition.dx + MediaQuery.of(context).size.width / 2, e.localPosition.dy)),
-                  onPointerMove: (e) => game.handlePointerMove(Offset(e.localPosition.dx + MediaQuery.of(context).size.width / 2, e.localPosition.dy)),
-                  onPointerUp: (e) => game.handlePointerUp(Offset(e.localPosition.dx + MediaQuery.of(context).size.width / 2, e.localPosition.dy)),
-                  onPointerCancel: (e) => game.handlePointerUp(Offset(e.localPosition.dx + MediaQuery.of(context).size.width / 2, e.localPosition.dy)),
-                  child: Container(color: Colors.transparent),
-                ),
-              ),
-            ],
+          child: Listener(
+            behavior: HitTestBehavior.translucent,
+            onPointerDown: (e) => game.handlePointerDown(e.pointer, e.localPosition),
+            onPointerMove: (e) => game.handlePointerMove(e.pointer, e.localPosition),
+            onPointerUp: (e) => game.handlePointerUp(e.pointer),
+            onPointerCancel: (e) => game.handlePointerUp(e.pointer),
+            child: const SizedBox.expand(),
           ),
         ),
 

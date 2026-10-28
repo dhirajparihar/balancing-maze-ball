@@ -33,11 +33,8 @@ class GameplayScreen extends StatefulWidget {
 
 class _GameplayScreenState extends State<GameplayScreen> with WidgetsBindingObserver {
   late final BalanceRunnerGame _game;
+  final ValueNotifier<BalanceRunnerHudData> _hudNotifier = ValueNotifier(const BalanceRunnerHudData());
 
-  int _distance = 0;
-  int _score = 0;
-  int _multiplier = 1;
-  double _time = 0.0;
   bool _isNewRecord = false;
   int _bestDistance = 0;
 
@@ -57,35 +54,38 @@ class _GameplayScreenState extends State<GameplayScreen> with WidgetsBindingObse
     );
 
     _game.onHudUpdate = (dist, sc, mult, t) {
-      if (!mounted) return;
-      setState(() {
-        _distance = dist;
-        _score = sc;
-        _multiplier = mult;
-        _time = t;
-      });
-    };
-
-    _game.onGameOver = (dist, sc) async {
-      final result = await widget.gameService.recordEndlessRun(
+      _hudNotifier.value = BalanceRunnerHudData(
         distance: dist,
         score: sc,
-        isDailyChallenge: widget.isDailyChallenge,
+        multiplier: mult,
+        time: t,
       );
+    };
 
-      if (!mounted) return;
-      setState(() {
-        _isNewRecord = result['isNewRecord'] as bool? ?? false;
-        _bestDistance = result['bestDistance'] as int? ?? dist;
+    _game.onGameOver = (dist, sc) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        final result = await widget.gameService.recordEndlessRun(
+          distance: dist,
+          score: sc,
+          isDailyChallenge: widget.isDailyChallenge,
+        );
+
+        if (!mounted) return;
+        setState(() {
+          _isNewRecord = result['isNewRecord'] as bool? ?? false;
+          _bestDistance = result['bestDistance'] as int? ?? dist;
+        });
+
+        _game.overlays.add('GameOverModal');
       });
-
-      _game.overlays.add('GameOverModal');
     };
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _hudNotifier.dispose();
     super.dispose();
   }
 
@@ -112,11 +112,8 @@ class _GameplayScreenState extends State<GameplayScreen> with WidgetsBindingObse
     _game.overlays.remove('PauseModal');
     _game.overlays.remove('GameOverModal');
     _game.restart();
+    _hudNotifier.value = const BalanceRunnerHudData();
     setState(() {
-      _distance = 0;
-      _score = 0;
-      _multiplier = 1;
-      _time = 0.0;
       _isNewRecord = false;
     });
   }
@@ -136,22 +133,20 @@ class _GameplayScreenState extends State<GameplayScreen> with WidgetsBindingObse
         overlayBuilderMap: {
           'GameplayHud': (context, game) => GameplayHudOverlay(
                 game: game,
-                distance: _distance,
-                time: _time,
-                multiplier: _multiplier,
+                hudNotifier: _hudNotifier,
                 onPause: _onPause,
               ),
           'PauseModal': (context, game) => PauseModal(
-                distance: _distance,
-                time: _time,
-                multiplier: _multiplier,
+                distance: _hudNotifier.value.distance,
+                time: _hudNotifier.value.time,
+                multiplier: _hudNotifier.value.multiplier,
                 onResume: _onResume,
                 onRestart: _onRestart,
                 onMainMenu: _onHome,
               ),
           'GameOverModal': (context, game) => FailedModal(
-                distance: _distance,
-                score: _score,
+                distance: _hudNotifier.value.distance,
+                score: _hudNotifier.value.score,
                 bestDistance: _bestDistance,
                 isNewRecord: _isNewRecord,
                 onRetry: _onRestart,

@@ -1,0 +1,45 @@
+name: balancing_maze
+description: "Climbing Ball Maze - A 2.5D marble balancing arcade puzzle game"
+publish_to: 'none'
+version: 1.0.2+1
+
+environment:
+  sdk: ^3.11.3
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  
+  # Game Engine
+  flame: ^1.22.0
+  flame_forge2d: ^0.19.0+2
+  
+  # State Management
+  flutter_riverpod: ^2.6.1
+  
+  # Storage
+  shared_preferences: ^2.5.3
+  
+  # Audio
+  audioplayers: ^6.4.0
+  
+  # Utilities
+  uuid: ^4.5.1
+  equatable: ^2.0.7
+  intl: ^0.20.3
+  collection: ^1.19.1
+  sensors_plus: ^6.1.1
+  vibration: ^2.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  
+  assets:
+    - assets/audio/
+    - assets/images/

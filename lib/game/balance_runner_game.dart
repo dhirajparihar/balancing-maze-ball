@@ -96,8 +96,8 @@ class BalanceRunnerGame extends Game {
   // Lever / Balance Bar
   static const double barPivotX = 20.0;
   static const double barPivotY = 58.0;
-  static const double barLength = 28.0; // spans 6.0 to 34.0
-  static const double maxTiltAngle = 0.48; // ~27.5 degrees
+  static const double barLength = 33.5; // spans across the entire track from rail to rail
+  static const double maxTiltAngle = 0.44; // ~25.2 degrees
 
   double barTilt = 0.0; // Current angle in radians
   double targetTilt = 0.0;
@@ -107,8 +107,8 @@ class BalanceRunnerGame extends Game {
   double lastTouchRightY = 0.0;
 
   // Ball
-  static const double ballRadius = 1.35;
-  double ballPosAlongBar = 0.0; // -13.0 to +13.0
+  static const double ballRadius = 1.55;
+  double ballPosAlongBar = 0.0;
   double ballVelocity = 0.0;
   double ballAngle = 0.0;
   Vector2 ballWorldPos = Vector2(barPivotX, barPivotY - ballRadius);
@@ -318,12 +318,28 @@ class BalanceRunnerGame extends Game {
 
     // 2. Ball Physics on Inclined Lever
     if (!isFallingOff && !isSinkingInHole) {
-      const double gravityG = 52.0; // Gravity acceleration along incline
-      const double friction = 0.985;
+      const double gravityG = 38.0; // Responsive gravity along incline
+      const double friction = 0.982;
 
       final double inclineAcc = sin(barTilt) * gravityG;
       ballVelocity = (ballVelocity + inclineAcc * dt) * pow(friction, dt * 60);
       ballPosAlongBar += ballVelocity * dt;
+
+      // End-collar bumper constraints: keep the ball securely on the bar
+      final halfLength = (barLength / 2.0) - ballRadius - 0.5;
+      if (ballPosAlongBar < -halfLength) {
+        ballPosAlongBar = -halfLength;
+        if (ballVelocity < -1.5 && gameService.playerData.vibrationEnabled) {
+          HapticFeedback.selectionClick();
+        }
+        ballVelocity = -ballVelocity * 0.35; // Soft collar bounce
+      } else if (ballPosAlongBar > halfLength) {
+        ballPosAlongBar = halfLength;
+        if (ballVelocity > 1.5 && gameService.playerData.vibrationEnabled) {
+          HapticFeedback.selectionClick();
+        }
+        ballVelocity = -ballVelocity * 0.35; // Soft collar bounce
+      }
 
       // Ball rotation
       ballAngle += (ballVelocity / ballRadius) * dt;
@@ -335,19 +351,8 @@ class BalanceRunnerGame extends Game {
         barPivotX + ballPosAlongBar * cosT - sinT * ballRadius,
         barPivotY + ballPosAlongBar * sinT - cosT * ballRadius,
       );
-
-      // Check if ball fell off the ends of the bar
-      final halfLength = (barLength / 2.0) - ballRadius;
-      if (ballPosAlongBar < -halfLength - 0.4 || ballPosAlongBar > halfLength + 0.4) {
-        isFallingOff = true;
-        fallVelocity = Vector2(
-          ballVelocity * cosT,
-          ballVelocity * sinT + 4.0,
-        );
-        gameService.audioManager.playSfx(SoundEffect.fallOut);
-      }
     } else if (isFallingOff) {
-      // Free falling down into the abyss
+      // Free falling down into the abyss (knocked by hazard)
       fallVelocity.y += 90.0 * dt;
       ballWorldPos += fallVelocity * dt;
       ballAngle += 4.0 * dt;
@@ -714,14 +719,14 @@ class BalanceRunnerGame extends Game {
     canvas.rotate(barTilt);
 
     final halfL = barLength / 2.0;
-    final barRect = Rect.fromLTWH(-halfL, -0.6, barLength, 1.2);
+    final barRect = Rect.fromLTWH(-halfL, -0.9, barLength, 1.8);
 
     // Bar Glow
     canvas.drawRRect(
-      RRect.fromRectAndRadius(barRect, const Radius.circular(0.6)),
+      RRect.fromRectAndRadius(barRect, const Radius.circular(0.9)),
       Paint()
-        ..color = barStyle.glowColor.withValues(alpha: 0.4)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2),
+        ..color = barStyle.glowColor.withValues(alpha: 0.5)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3),
     );
 
     // Bar Gradient Body
@@ -731,30 +736,30 @@ class BalanceRunnerGame extends Game {
       end: Alignment.bottomCenter,
     );
     canvas.drawRRect(
-      RRect.fromRectAndRadius(barRect, const Radius.circular(0.6)),
+      RRect.fromRectAndRadius(barRect, const Radius.circular(0.9)),
       Paint()..shader = barGradient.createShader(barRect),
     );
 
-    // End Collars / Carriages
-    final collarPaint = Paint()..color = const Color(0xFF263238);
+    // End Collars / Carriages & Bumpers
+    final collarPaint = Paint()..color = const Color(0xFF1E293B);
     final collarBevel = Paint()
       ..color = barStyle.primaryColor
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 0.25;
+      ..strokeWidth = 0.35;
 
-    // Left collar
-    final leftCollar = Rect.fromLTWH(-halfL - 0.4, -1.2, 1.0, 2.4);
-    canvas.drawRRect(RRect.fromRectAndRadius(leftCollar, const Radius.circular(0.4)), collarPaint);
-    canvas.drawRRect(RRect.fromRectAndRadius(leftCollar, const Radius.circular(0.4)), collarBevel);
+    // Left collar bumper
+    final leftCollar = Rect.fromLTWH(-halfL - 0.4, -1.8, 1.5, 3.6);
+    canvas.drawRRect(RRect.fromRectAndRadius(leftCollar, const Radius.circular(0.6)), collarPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(leftCollar, const Radius.circular(0.6)), collarBevel);
 
-    // Right collar
-    final rightCollar = Rect.fromLTWH(halfL - 0.6, -1.2, 1.0, 2.4);
-    canvas.drawRRect(RRect.fromRectAndRadius(rightCollar, const Radius.circular(0.4)), collarPaint);
-    canvas.drawRRect(RRect.fromRectAndRadius(rightCollar, const Radius.circular(0.4)), collarBevel);
+    // Right collar bumper
+    final rightCollar = Rect.fromLTWH(halfL - 1.1, -1.8, 1.5, 3.6);
+    canvas.drawRRect(RRect.fromRectAndRadius(rightCollar, const Radius.circular(0.6)), collarPaint);
+    canvas.drawRRect(RRect.fromRectAndRadius(rightCollar, const Radius.circular(0.6)), collarBevel);
 
     // Center Pivot Indicator
-    canvas.drawCircle(Offset.zero, 0.9, Paint()..color = const Color(0xFF102027));
-    canvas.drawCircle(Offset.zero, 0.45, Paint()..color = barStyle.primaryColor);
+    canvas.drawCircle(Offset.zero, 1.1, Paint()..color = const Color(0xFF0F172A));
+    canvas.drawCircle(Offset.zero, 0.55, Paint()..color = barStyle.primaryColor);
 
     canvas.restore();
   }

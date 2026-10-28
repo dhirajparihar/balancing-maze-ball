@@ -47,17 +47,17 @@ class BalancingMazeApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Balancing Maze',
+      title: 'Balance Runner',
       debugShowCheckedModeBanner: false,
       themeMode: ThemeMode.dark,
       darkTheme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF091422),
+        scaffoldBackgroundColor: const Color(0xFF061019),
         primaryColor: const Color(0xFF00E5FF),
         colorScheme: const ColorScheme.dark(
           primary: Color(0xFF00E5FF),
           secondary: Color(0xFFFFB74D),
-          surface: Color(0xFF0F2238),
+          surface: Color(0xFF0A1826),
         ),
         fontFamily: 'sans-serif',
       ),

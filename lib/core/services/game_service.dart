@@ -317,6 +317,142 @@ class GameService {
     await save();
   }
 
+  // ---- Balance Runner Progression & Endless Runs ----
+
+  Future<Map<String, dynamic>> recordEndlessRun({
+    required int distance,
+    required int score,
+    bool isDailyChallenge = false,
+  }) async {
+    final bool isNewDistanceRecord = distance > playerData.bestDistance;
+    final bool isNewScoreRecord = score > playerData.bestScore;
+
+    if (isNewDistanceRecord) {
+      playerData.bestDistance = distance;
+    }
+    if (isNewScoreRecord) {
+      playerData.bestScore = score;
+    }
+
+    if (isDailyChallenge) {
+      if (distance > playerData.dailyChallengeBestDistance) {
+        playerData.dailyChallengeBestDistance = distance;
+      }
+      if (score > playerData.dailyChallengeBestScore) {
+        playerData.dailyChallengeBestScore = score;
+      }
+      playerData.lastDailyChallengeDate = DateTime.now();
+    }
+
+    // Economy: Earn 1 coin for every 10 meters travelled, plus bonus for score
+    final earnedCoins = (distance ~/ 10) + (score ~/ 200);
+    playerData.coins += earnedCoins;
+
+    await save();
+
+    if (isNewDistanceRecord || isNewScoreRecord) {
+      audioManager.playSfx(SoundEffect.victory);
+    }
+
+    return {
+      'isNewRecord': isNewDistanceRecord,
+      'bestDistance': playerData.bestDistance,
+      'bestScore': playerData.bestScore,
+      'coinsEarned': earnedCoins,
+    };
+  }
+
+  Future<void> equipMarbleSkin(String skinId) async {
+    playerData.equippedMarbleSkin = skinId;
+    await save();
+  }
+
+  Future<void> equipBarSkin(String barSkinId) async {
+    playerData.equippedBarSkin = barSkinId;
+    await save();
+  }
+
+  Future<bool> unlockBallSkin(String skinId, int cost) async {
+    final itemKey = 'marble_$skinId';
+    if (playerData.ownedItems.contains(itemKey)) {
+      playerData.equippedMarbleSkin = skinId;
+      await save();
+      return true;
+    }
+    if (!canAfford(cost)) return false;
+    playerData.coins -= cost;
+    playerData.ownedItems.add(itemKey);
+    playerData.equippedMarbleSkin = skinId;
+    await save();
+    audioManager.playSfx(SoundEffect.purchase);
+    return true;
+  }
+
+  Future<bool> unlockBarStyle(String barStyleId, int cost) async {
+    final itemKey = 'bar_$barStyleId';
+    if (playerData.ownedItems.contains(itemKey)) {
+      playerData.equippedBarSkin = barStyleId;
+      await save();
+      return true;
+    }
+    if (!canAfford(cost)) return false;
+    playerData.coins -= cost;
+    playerData.ownedItems.add(itemKey);
+    playerData.equippedBarSkin = barStyleId;
+    await save();
+    audioManager.playSfx(SoundEffect.purchase);
+    return true;
+  }
+
+  bool isBallSkinUnlocked(String skinId) {
+    if (skinId == 'classic_metallic' || skinId == 'neon_cyan') return true;
+    return playerData.ownedItems.contains('marble_$skinId');
+  }
+
+  bool isBarStyleUnlocked(String barStyleId) {
+    if (barStyleId == 'bar_cyan') return true;
+    return playerData.ownedItems.contains('bar_$barStyleId');
+  }
+
+  List<Map<String, dynamic>> getGlobalLeaderboard() {
+    final userDistance = playerData.bestDistance > 0 ? playerData.bestDistance : 2840;
+    return [
+      {'rank': 1, 'name': 'PlayerOne', 'distance': 12840, 'avatar': 'assets/images/avatar1.png'},
+      {'rank': 2, 'name': 'SkyRunner', 'distance': 11920, 'avatar': 'assets/images/avatar2.png'},
+      {'rank': 3, 'name': 'NeonBall', 'distance': 10450, 'avatar': 'assets/images/avatar3.png'},
+      {'rank': 4, 'name': 'BalancePro', 'distance': 9880, 'avatar': 'assets/images/avatar4.png'},
+      {'rank': 5, 'name': 'TiltMaster', 'distance': 8760, 'avatar': 'assets/images/avatar5.png'},
+      {'rank': 6, 'name': 'VortexChaser', 'distance': 7430, 'avatar': 'assets/images/avatar6.png'},
+      {'rank': 7, 'name': 'CyberApex', 'distance': 6920, 'avatar': 'assets/images/avatar7.png'},
+      {'rank': 8, 'name': 'QuantumGlide', 'distance': 5840, 'avatar': 'assets/images/avatar8.png'},
+      {'rank': 23, 'name': 'You', 'distance': userDistance, 'isUser': true},
+    ];
+  }
+
+  List<Map<String, dynamic>> getFriendsLeaderboard() {
+    final userDistance = playerData.bestDistance > 0 ? playerData.bestDistance : 2840;
+    return [
+      {'rank': 1, 'name': 'AlexPro', 'distance': 4220, 'avatar': 'assets/images/avatar1.png'},
+      {'rank': 2, 'name': 'RunnerX', 'distance': 3980, 'avatar': 'assets/images/avatar2.png'},
+      {'rank': 3, 'name': 'BallMaster', 'distance': 3760, 'avatar': 'assets/images/avatar3.png'},
+      {'rank': 4, 'name': 'You', 'distance': userDistance, 'isUser': true},
+      {'rank': 5, 'name': 'LunaTrek', 'distance': 2190, 'avatar': 'assets/images/avatar5.png'},
+    ];
+  }
+
+  List<Map<String, dynamic>> getDailyChallengeLeaderboard() {
+    final userDaily = playerData.dailyChallengeBestDistance > 0
+        ? playerData.dailyChallengeBestDistance
+        : (playerData.bestDistance > 0 ? (playerData.bestDistance * 0.8).round() : 1850);
+    return [
+      {'rank': 1, 'name': 'AlexPro', 'distance': 4220},
+      {'rank': 2, 'name': 'RunnerX', 'distance': 3980},
+      {'rank': 3, 'name': 'BallMaster', 'distance': 3760},
+      {'rank': 4, 'name': 'GravityHero', 'distance': 3410},
+      {'rank': 5, 'name': 'You', 'distance': userDaily, 'isUser': true},
+    ];
+  }
+
   Future<void> resetProgress() async {
     await _storage.resetAllData();
     playerData = PlayerData();

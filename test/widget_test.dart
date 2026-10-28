@@ -8,7 +8,7 @@ void main() {
     await tester.pumpWidget(BalancingMazeApp(gameService: gameService));
 
     // Verify that the title text is rendered on the splash screen
-    expect(find.text('BALANCING'), findsOneWidget);
-    expect(find.text('MAZE'), findsOneWidget);
+    expect(find.text('BALANCE'), findsOneWidget);
+    expect(find.text('RUNNER'), findsOneWidget);
   });
 }

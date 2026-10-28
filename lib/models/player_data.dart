@@ -4,6 +4,7 @@ library;
 class PlayerData {
   int coins;
   int bestScore;
+  int bestDistance; // in meters
   int totalStars;
   int highestLevelCompleted;
   Map<int, int> levelStars; // levelId -> stars (0-3)
@@ -11,12 +12,16 @@ class PlayerData {
   Map<int, bool> levelCompleted; // levelId -> completed
   Set<String> ownedItems; // item IDs
   String equippedMarbleSkin;
+  String equippedBarSkin;
   String equippedTrail;
   String selectedThemeId;
   Map<String, bool> achievementsCompleted;
   Map<String, bool> achievementsClaimed;
   int dailyRewardDay; // 1-7 cycle
   DateTime? lastDailyRewardClaim;
+  int dailyChallengeBestDistance;
+  int dailyChallengeBestScore;
+  DateTime? lastDailyChallengeDate;
   bool tutorialCompleted;
   int totalPlayTimeSeconds;
   double musicVolume;
@@ -32,19 +37,24 @@ class PlayerData {
   PlayerData({
     this.coins = 500,
     this.bestScore = 0,
+    this.bestDistance = 0,
     this.totalStars = 0,
     this.highestLevelCompleted = 0,
     Map<int, int>? levelStars,
     Map<int, int>? levelBestScores,
     Map<int, bool>? levelCompleted,
     Set<String>? ownedItems,
-    this.equippedMarbleSkin = 'default',
+    this.equippedMarbleSkin = 'classic_metallic',
+    this.equippedBarSkin = 'bar_cyan',
     this.equippedTrail = 'default',
     this.selectedThemeId = 'neon_aqua',
     Map<String, bool>? achievementsCompleted,
     Map<String, bool>? achievementsClaimed,
     this.dailyRewardDay = 1,
     this.lastDailyRewardClaim,
+    this.dailyChallengeBestDistance = 0,
+    this.dailyChallengeBestScore = 0,
+    this.lastDailyChallengeDate,
     this.tutorialCompleted = false,
     this.totalPlayTimeSeconds = 0,
     this.musicVolume = 0.7,
@@ -55,11 +65,16 @@ class PlayerData {
     this.accelerometerEnabled = false,
     this.leftHandedLayout = false,
     this.reducedMotion = false,
-    this.dataVersion = 1,
+    this.dataVersion = 2,
   })  : levelStars = levelStars ?? {},
         levelBestScores = levelBestScores ?? {},
         levelCompleted = levelCompleted ?? {},
-        ownedItems = ownedItems ?? {'marble_default', 'trail_default'},
+        ownedItems = ownedItems ?? {
+          'marble_classic_metallic',
+          'marble_neon_cyan',
+          'bar_cyan',
+          'trail_default',
+        },
         achievementsCompleted = achievementsCompleted ?? {},
         achievementsClaimed = achievementsClaimed ?? {};
 
@@ -73,6 +88,7 @@ class PlayerData {
   Map<String, dynamic> toJson() => {
         'coins': coins,
         'bestScore': bestScore,
+        'bestDistance': bestDistance,
         'totalStars': totalStars,
         'highestLevelCompleted': highestLevelCompleted,
         'levelStars':
@@ -83,12 +99,16 @@ class PlayerData {
             levelCompleted.map((k, v) => MapEntry(k.toString(), v)),
         'ownedItems': ownedItems.toList(),
         'equippedMarbleSkin': equippedMarbleSkin,
+        'equippedBarSkin': equippedBarSkin,
         'equippedTrail': equippedTrail,
         'selectedThemeId': selectedThemeId,
         'achievementsCompleted': achievementsCompleted,
         'achievementsClaimed': achievementsClaimed,
         'dailyRewardDay': dailyRewardDay,
         'lastDailyRewardClaim': lastDailyRewardClaim?.toIso8601String(),
+        'dailyChallengeBestDistance': dailyChallengeBestDistance,
+        'dailyChallengeBestScore': dailyChallengeBestScore,
+        'lastDailyChallengeDate': lastDailyChallengeDate?.toIso8601String(),
         'tutorialCompleted': tutorialCompleted,
         'totalPlayTimeSeconds': totalPlayTimeSeconds,
         'musicVolume': musicVolume,
@@ -106,6 +126,7 @@ class PlayerData {
     return PlayerData(
       coins: json['coins'] as int? ?? 500,
       bestScore: json['bestScore'] as int? ?? 0,
+      bestDistance: json['bestDistance'] as int? ?? 0,
       totalStars: json['totalStars'] as int? ?? 0,
       highestLevelCompleted: json['highestLevelCompleted'] as int? ?? 0,
       levelStars: (json['levelStars'] as Map<String, dynamic>?)
@@ -120,9 +141,16 @@ class PlayerData {
       ownedItems: (json['ownedItems'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toSet() ??
-          {'marble_default', 'trail_default'},
+          {
+            'marble_classic_metallic',
+            'marble_neon_cyan',
+            'bar_cyan',
+            'trail_default',
+          },
       equippedMarbleSkin:
-          json['equippedMarbleSkin'] as String? ?? 'default',
+          json['equippedMarbleSkin'] as String? ?? 'classic_metallic',
+      equippedBarSkin:
+          json['equippedBarSkin'] as String? ?? 'bar_cyan',
       equippedTrail: json['equippedTrail'] as String? ?? 'default',
       selectedThemeId: json['selectedThemeId'] as String? ?? 'neon_aqua',
       achievementsCompleted:
@@ -137,6 +165,13 @@ class PlayerData {
       lastDailyRewardClaim: json['lastDailyRewardClaim'] != null
           ? DateTime.parse(json['lastDailyRewardClaim'] as String)
           : null,
+      dailyChallengeBestDistance:
+          json['dailyChallengeBestDistance'] as int? ?? 0,
+      dailyChallengeBestScore:
+          json['dailyChallengeBestScore'] as int? ?? 0,
+      lastDailyChallengeDate: json['lastDailyChallengeDate'] != null
+          ? DateTime.parse(json['lastDailyChallengeDate'] as String)
+          : null,
       tutorialCompleted: json['tutorialCompleted'] as bool? ?? false,
       totalPlayTimeSeconds: json['totalPlayTimeSeconds'] as int? ?? 0,
       musicVolume: (json['musicVolume'] as num?)?.toDouble() ?? 0.7,
@@ -149,7 +184,7 @@ class PlayerData {
           json['accelerometerEnabled'] as bool? ?? false,
       leftHandedLayout: json['leftHandedLayout'] as bool? ?? false,
       reducedMotion: json['reducedMotion'] as bool? ?? false,
-      dataVersion: json['dataVersion'] as int? ?? 1,
+      dataVersion: json['dataVersion'] as int? ?? 2,
     );
   }
 }

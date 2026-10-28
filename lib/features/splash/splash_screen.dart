@@ -1,10 +1,10 @@
 /// Splash screen — initializes services, audio, and storage while showing
-/// an atmospheric neon glowing arcade startup animation.
+/// an atmospheric neon glowing arcade startup animation for BALANCE RUNNER.
 library;
 
 import 'package:flutter/material.dart';
 import '../../core/services/game_service.dart';
-import '../gameplay/gameplay_screen.dart';
+import '../home/home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   final GameService gameService;
@@ -26,7 +26,7 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
+      duration: const Duration(milliseconds: 2000),
     );
 
     _glowAnimation = Tween<double>(begin: 0.2, end: 1.0).animate(
@@ -50,24 +50,20 @@ class _SplashScreenState extends State<SplashScreen>
     _controller.forward();
     await widget.gameService.initialize();
 
-    // Small delay to let splash animation breathe
-    await Future.delayed(const Duration(milliseconds: 2400));
+    // Delay for splash animation
+    await Future.delayed(const Duration(milliseconds: 2200));
     if (!mounted) return;
-
-    final startingLevel = (widget.gameService.playerData.highestLevelCompleted + 1).clamp(1, 6);
 
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
-        pageBuilder: (context, anim, _) => GameplayScreen(
+        pageBuilder: (context, anim, _) => HomeScreen(
           gameService: widget.gameService,
-          levelId: startingLevel,
-          startInMenu: true,
         ),
         transitionsBuilder: (context, anim, _, child) => FadeTransition(
           opacity: anim,
           child: child,
         ),
-        transitionDuration: const Duration(milliseconds: 600),
+        transitionDuration: const Duration(milliseconds: 500),
       ),
     );
   }
@@ -81,7 +77,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A1628),
+      backgroundColor: const Color(0xFF061019),
       body: Stack(
         children: [
           // Background ambient gradient
@@ -91,9 +87,9 @@ class _SplashScreenState extends State<SplashScreen>
                 center: Alignment(0.0, -0.1),
                 radius: 1.2,
                 colors: [
-                  Color(0xFF0F2B48),
-                  Color(0xFF0A1628),
-                  Color(0xFF050B14),
+                  Color(0xFF0D253A),
+                  Color(0xFF071422),
+                  Color(0xFF03070E),
                 ],
               ),
             ),
@@ -107,15 +103,15 @@ class _SplashScreenState extends State<SplashScreen>
                 return Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // 3D Neon "BALANCING"
+                    // 3D Neon "BALANCE"
                     Text(
-                      'BALANCING',
+                      'BALANCE',
                       style: TextStyle(
                         fontFamily: 'sans-serif',
                         fontSize: 42,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 6.0,
-                        color: const Color(0xFF00E5FF),
+                        color: Colors.white,
                         shadows: [
                           Shadow(
                             color: const Color(0xFF00E5FF).withValues(alpha: _glowAnimation.value),
@@ -136,22 +132,22 @@ class _SplashScreenState extends State<SplashScreen>
 
                     const SizedBox(height: 6),
 
-                    // 3D Neon "MAZE"
+                    // 3D Neon "RUNNER"
                     Text(
-                      'MAZE',
+                      'RUNNER',
                       style: TextStyle(
                         fontFamily: 'sans-serif',
                         fontSize: 54,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 8.0,
-                        color: const Color(0xFFFFAB40),
+                        color: const Color(0xFF5CF3FF),
                         shadows: [
                           Shadow(
-                            color: const Color(0xFFFF9100).withValues(alpha: _glowAnimation.value),
+                            color: const Color(0xFF00E5FF).withValues(alpha: _glowAnimation.value),
                             blurRadius: 32 * _glowAnimation.value,
                           ),
                           Shadow(
-                            color: const Color(0xFFFF6D00).withValues(alpha: 0.8),
+                            color: const Color(0xFF0080FF).withValues(alpha: 0.8),
                             blurRadius: 12,
                           ),
                           const Shadow(
@@ -163,64 +159,79 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ),
 
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 36),
 
-                    // Balancing Rod & Rolling Marble Animation
+                    // Balancing rod & rolling marble animation
                     SizedBox(
-                      width: 320,
+                      width: 240,
                       height: 50,
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          // The Bar
+                          // Glow behind the rod
                           Container(
                             height: 6,
                             decoration: BoxDecoration(
+                              color: const Color(0xFF00E5FF).withValues(alpha: _glowAnimation.value * 0.4),
                               borderRadius: BorderRadius.circular(3),
-                              gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFF00E5FF),
-                                  Color(0xFF80DEEA),
-                                  Color(0xFF00E5FF),
-                                ],
-                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: const Color(0xFF00E5FF).withValues(alpha: 0.8),
+                                  color: const Color(0xFF00E5FF).withValues(alpha: _glowAnimation.value * 0.8),
                                   blurRadius: 12,
+                                  spreadRadius: 2,
                                 ),
                               ],
                             ),
                           ),
 
-                          // The Marble
+                          // Metallic Rod
+                          Container(
+                            height: 6,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF5CF3FF), Color(0xFF00E5FF), Color(0xFF006064)],
+                              ),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                          ),
+
+                          // Rolling Metallic Marble
                           Transform.translate(
-                            offset: Offset(_marbleXAnimation.value, -14),
+                            offset: Offset(_marbleXAnimation.value * 0.6, -14),
                             child: Container(
-                              width: 24,
-                              height: 24,
+                              width: 26,
+                              height: 26,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
                                 gradient: const RadialGradient(
-                                  center: Alignment(-0.3, -0.3),
+                                  center: Alignment(-0.35, -0.4),
+                                  radius: 0.9,
                                   colors: [
                                     Colors.white,
-                                    Color(0xFFCFD8DC),
-                                    Color(0xFF78909C),
+                                    Color(0xFFE2E8F0),
+                                    Color(0xFF94A3B8),
+                                    Color(0xFF334155),
                                   ],
-                                  stops: [0.0, 0.4, 1.0],
+                                  stops: [0.0, 0.35, 0.7, 1.0],
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.white.withValues(alpha: 0.9),
-                                    blurRadius: 10,
-                                  ),
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.5),
-                                    blurRadius: 6,
-                                    offset: const Offset(0, 3),
+                                    color: const Color(0xFF00E5FF).withValues(alpha: 0.5),
+                                    blurRadius: 12,
+                                    spreadRadius: 1,
                                   ),
                                 ],
+                              ),
+                              child: Align(
+                                alignment: const Alignment(-0.4, -0.4),
+                                child: Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: const BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: Colors.white,
+                                  ),
+                                ),
                               ),
                             ),
                           ),
@@ -228,15 +239,23 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ),
 
-                    const SizedBox(height: 50),
+                    const SizedBox(height: 36),
 
-                    // Loading indicator
-                    const SizedBox(
-                      width: 28,
-                      height: 28,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2.5,
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00E5FF)),
+                    // "INITIALIZING CYBER TRACK..."
+                    Text(
+                      'INITIALIZING CYBER TRACK...',
+                      style: TextStyle(
+                        fontFamily: 'sans-serif',
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 3.0,
+                        color: const Color(0xFF00E5FF).withValues(alpha: _glowAnimation.value),
+                        shadows: [
+                          Shadow(
+                            color: const Color(0xFF00E5FF).withValues(alpha: 0.8),
+                            blurRadius: 12,
+                          ),
+                        ],
                       ),
                     ),
                   ],

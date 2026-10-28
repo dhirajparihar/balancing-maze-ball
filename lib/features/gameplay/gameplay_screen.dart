@@ -1,86 +1,86 @@
-/// Gameplay screen — integrates Flame + Forge2D with Flutter overlays:
-/// StartMenuOverlay, GameplayHudOverlay, ShopThemeSelectorSheet,
-/// PauseModal, VictoryModal, FailedModal, and SettingsModal.
+/// Gameplay Screen — integrates BalanceRunnerGame with GameWidget & Flutter Overlays:
+/// Top Glass HUD (Distance, Time, Multiplier, Pause),
+/// PauseModal, and FailedModal (Game Over).
 library;
 
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../core/providers/game_providers.dart';
 import '../../core/services/game_service.dart';
-import '../../game/balancing_maze_game.dart';
-import '../../game/systems/level_definitions.dart';
-import '../../models/maze_theme_config.dart';
-import '../level_map/level_map_screen.dart';
+import '../../game/balance_runner_game.dart';
 import 'overlays/failed_modal.dart';
 import 'overlays/gameplay_hud_overlay.dart';
 import 'overlays/pause_modal.dart';
-import 'overlays/settings_modal.dart';
-import 'overlays/shop_theme_selector_sheet.dart';
-import 'overlays/start_menu_overlay.dart';
-import 'overlays/victory_modal.dart';
 
-class GameplayScreen extends ConsumerStatefulWidget {
+class GameplayScreen extends StatefulWidget {
   final GameService gameService;
-  final int levelId;
+  final int? seed;
+  final bool isDailyChallenge;
+  final int? levelId;
   final bool startInMenu;
 
   const GameplayScreen({
     super.key,
     required this.gameService,
-    this.levelId = 1,
-    this.startInMenu = true,
+    this.seed,
+    this.isDailyChallenge = false,
+    this.levelId,
+    this.startInMenu = false,
   });
 
   @override
-  ConsumerState<GameplayScreen> createState() => _GameplayScreenState();
+  State<GameplayScreen> createState() => _GameplayScreenState();
 }
 
-class _GameplayScreenState extends ConsumerState<GameplayScreen> with WidgetsBindingObserver {
-  late final BalancingMazeGame _game;
+class _GameplayScreenState extends State<GameplayScreen> with WidgetsBindingObserver {
+  late final BalanceRunnerGame _game;
+
+  int _distance = 0;
+  int _score = 0;
+  int _multiplier = 1;
+  double _time = 0.0;
+  bool _isNewRecord = false;
+  int _bestDistance = 0;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    final initialTheme = MazeThemeConfig.getById(widget.gameService.playerData.selectedThemeId);
-    final initialLevel = LevelDefinitions.getById(widget.levelId);
 
-    _game = BalancingMazeGame(
+    _bestDistance = widget.isDailyChallenge
+        ? widget.gameService.playerData.dailyChallengeBestDistance
+        : widget.gameService.playerData.bestDistance;
+
+    _game = BalanceRunnerGame(
       gameService: widget.gameService,
-      initialLevel: initialLevel,
-      initialTheme: initialTheme,
-      startInMenu: widget.startInMenu,
-      onGoalReached: (stars, score, elapsed, bounces) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          ref.read(gamePlayStateProvider.notifier).recordGoalReached(
-                stars: stars,
-                finalScore: score,
-                bestTrail: _game.personalBestGhostTrail,
-              );
-        });
-      },
-      onHoleFell: (hole, attempts) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          ref.read(gamePlayStateProvider.notifier).recordHoleFall(
-                attempts,
-                _game.ghostTrail,
-              );
-        });
-      },
-      onWallBounce: (bounces) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (!mounted) return;
-          ref.read(gamePlayStateProvider.notifier).recordWallBounce();
-        });
-      },
-      onTimerTick: (remaining, elapsed) {
-        // High-frequency physics timer ticks are rendered directly by GameplayHudOverlay.
-        // Synchronous Riverpod mutations are omitted here to prevent build-cycle exceptions.
-      },
+      seed: widget.seed,
+      isDailyChallenge: widget.isDailyChallenge,
     );
+
+    _game.onHudUpdate = (dist, sc, mult, t) {
+      if (!mounted) return;
+      setState(() {
+        _distance = dist;
+        _score = sc;
+        _multiplier = mult;
+        _time = t;
+      });
+    };
+
+    _game.onGameOver = (dist, sc) async {
+      final result = await widget.gameService.recordEndlessRun(
+        distance: dist,
+        score: sc,
+        isDailyChallenge: widget.isDailyChallenge,
+      );
+
+      if (!mounted) return;
+      setState(() {
+        _isNewRecord = result['isNewRecord'] as bool? ?? false;
+        _bestDistance = result['bestDistance'] as int? ?? dist;
+      });
+
+      _game.overlays.add('GameOverModal');
+    };
   }
 
   @override
@@ -92,136 +92,70 @@ class _GameplayScreenState extends ConsumerState<GameplayScreen> with WidgetsBin
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused || state == AppLifecycleState.inactive) {
-      widget.gameService.audioManager.pauseMusic();
-      if (_game.playState == GamePlayState.playing) {
-        _game.pauseGame();
+      if (_game.state == RunnerState.playing) {
+        _onPause();
       }
-    } else if (state == AppLifecycleState.resumed) {
-      widget.gameService.audioManager.resumeMusic();
     }
   }
 
-  void _handleMenuReturn() {
-    if (mounted && Navigator.of(context).canPop()) {
-      Navigator.of(context).pop();
-    } else {
-      _game.overlays.remove('PauseModal');
-      _game.overlays.remove('VictoryModal');
-      _game.overlays.remove('FailedModal');
-      _game.overlays.remove('GameplayHud');
-      _game.overlays.add('StartMenu');
-      _game.playState = GamePlayState.menu;
-    }
+  void _onPause() {
+    _game.pause();
+    _game.overlays.add('PauseModal');
+  }
+
+  void _onResume() {
+    _game.overlays.remove('PauseModal');
+    _game.resume();
+  }
+
+  void _onRestart() {
+    _game.overlays.remove('PauseModal');
+    _game.overlays.remove('GameOverModal');
+    _game.restart();
+    setState(() {
+      _distance = 0;
+      _score = 0;
+      _multiplier = 1;
+      _time = 0.0;
+      _isNewRecord = false;
+    });
+  }
+
+  void _onHome() {
+    _game.overlays.clear();
+    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
-    // Component-Based Theme Injection (Pillar 2):
-    // Centralized MazeTheme provider via Riverpod updates colors, shaders, and particles
-    // instantly without re-instantiating the physics body tree!
-    ref.listen<MazeThemeConfig>(mazeThemeProvider, (previous, next) {
-      if (previous != next) {
-        _game.switchTheme(next);
-      }
-    });
-
     return Scaffold(
-      backgroundColor: Colors.black,
-      body: GameWidget<BalancingMazeGame>(
+      backgroundColor: const Color(0xFF061019),
+      body: GameWidget<BalanceRunnerGame>(
         game: _game,
-        initialActiveOverlays: [
-          widget.startInMenu ? 'StartMenu' : 'GameplayHud',
-        ],
+        initialActiveOverlays: const ['GameplayHud'],
         overlayBuilderMap: {
-          'StartMenu': (context, game) => StartMenuOverlay(
-                game: game,
-                onPlay: () {
-                  game.overlays.remove('StartMenu');
-                  game.overlays.add('GameplayHud');
-                  game.elapsedTime = 0.0;
-                  game.playState = GamePlayState.playing;
-                  ref.read(gamePlayStateProvider.notifier).initLevel(game.currentLevel);
-                },
-                onPlayDailyChallenge: (level) {
-                  game.overlays.remove('StartMenu');
-                  game.overlays.add('GameplayHud');
-                  game.loadLevelConfig(level);
-                  game.elapsedTime = 0.0;
-                  game.playState = GamePlayState.playing;
-                  ref.read(gamePlayStateProvider.notifier).initLevel(level);
-                },
-                onOpenShop: () {
-                  game.overlays.add('ShopTheme');
-                },
-                onOpenSettings: () {
-                  game.overlays.add('SettingsModal');
-                },
-                onOpenLevelMap: () {
-                  Navigator.of(context).push(
-                    PageRouteBuilder(
-                      pageBuilder: (context, anim, _) => LevelMapScreen(gameService: widget.gameService),
-                      transitionsBuilder: (context, anim, _, child) => FadeTransition(
-                        opacity: anim,
-                        child: child,
-                      ),
-                      transitionDuration: const Duration(milliseconds: 300),
-                    ),
-                  );
-                },
-              ),
           'GameplayHud': (context, game) => GameplayHudOverlay(
                 game: game,
-              ),
-          'ShopTheme': (context, game) => ShopThemeSelectorSheet(
-                game: game,
-                onClose: () {
-                  game.overlays.remove('ShopTheme');
-                },
+                distance: _distance,
+                time: _time,
+                multiplier: _multiplier,
+                onPause: _onPause,
               ),
           'PauseModal': (context, game) => PauseModal(
-                game: game,
-                onResume: () {
-                  game.resumeGame();
-                },
-                onRestart: () {
-                  game.restartLevel();
-                  ref.read(gamePlayStateProvider.notifier).initLevel(game.currentLevel);
-                },
-                onOpenSettings: () {
-                  game.overlays.add('SettingsModal');
-                },
-                onQuit: _handleMenuReturn,
+                distance: _distance,
+                time: _time,
+                multiplier: _multiplier,
+                onResume: _onResume,
+                onRestart: _onRestart,
+                onMainMenu: _onHome,
               ),
-          'VictoryModal': (context, game) => VictoryModal(
-                game: game,
-                onNextLevel: () {
-                  final nextId = game.currentLevel.id + 1;
-                  game.overlays.remove('VictoryModal');
-                  game.loadLevel(nextId);
-                  ref.read(gamePlayStateProvider.notifier).initLevel(LevelDefinitions.getById(nextId));
-                },
-                onReplay: () {
-                  game.restartLevel();
-                  ref.read(gamePlayStateProvider.notifier).initLevel(game.currentLevel);
-                },
-                onMenu: _handleMenuReturn,
-              ),
-          'FailedModal': (context, game) => FailedModal(
-                game: game,
-                onRevive: () {
-                  game.reviveMarble();
-                },
-                onTryAgain: () {
-                  game.restartLevel();
-                  ref.read(gamePlayStateProvider.notifier).initLevel(game.currentLevel);
-                },
-                onMenu: _handleMenuReturn,
-              ),
-          'SettingsModal': (context, game) => SettingsModal(
-                game: game,
-                onClose: () {
-                  game.overlays.remove('SettingsModal');
-                },
+          'GameOverModal': (context, game) => FailedModal(
+                distance: _distance,
+                score: _score,
+                bestDistance: _bestDistance,
+                isNewRecord: _isNewRecord,
+                onRetry: _onRestart,
+                onHome: _onHome,
               ),
         },
       ),

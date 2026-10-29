@@ -43,8 +43,10 @@ class GameplayHudOverlay extends StatelessWidget {
         Positioned.fill(
           child: Listener(
             behavior: HitTestBehavior.translucent,
-            onPointerDown: (e) => game.handlePointerDown(e.pointer, e.localPosition),
-            onPointerMove: (e) => game.handlePointerMove(e.pointer, e.localPosition),
+            onPointerDown: (e) =>
+                game.handlePointerDown(e.pointer, e.localPosition),
+            onPointerMove: (e) =>
+                game.handlePointerMove(e.pointer, e.localPosition),
             onPointerUp: (e) => game.handlePointerUp(e.pointer),
             onPointerCancel: (e) => game.handlePointerUp(e.pointer),
             child: const SizedBox.expand(),
@@ -63,18 +65,20 @@ class GameplayHudOverlay extends StatelessWidget {
               builder: (context, hudData, _) {
                 final int minutes = (hudData.time / 60).floor();
                 final int seconds = (hudData.time % 60).floor();
-                final timeStr = '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-                final distStr = '${NumberFormat('#,###').format(hudData.distance)} m';
+                final timeStr =
+                    '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+                final distStr =
+                    '${NumberFormat('#,###').format(hudData.distance)} m';
 
                 return Container(
-                  height: 60,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  height: 76,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF071422).withValues(alpha: 0.88),
-                    borderRadius: BorderRadius.circular(20),
+                    color: const Color(0xFF07152D).withValues(alpha: 0.94),
+                    borderRadius: BorderRadius.circular(22),
                     border: Border.all(
-                      color: const Color(0xFF00E5FF).withValues(alpha: 0.35),
-                      width: 1.2,
+                      color: const Color(0xFF3D94FF).withValues(alpha: 0.7),
+                      width: 1.0,
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -83,8 +87,8 @@ class GameplayHudOverlay extends StatelessWidget {
                         offset: const Offset(0, 4),
                       ),
                       BoxShadow(
-                        color: const Color(0xFF00E5FF).withValues(alpha: 0.15),
-                        blurRadius: 16,
+                        color: const Color(0xFF176BFF).withValues(alpha: 0.24),
+                        blurRadius: 20,
                       ),
                     ],
                   ),
@@ -92,10 +96,20 @@ class GameplayHudOverlay extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       // DISTANCE
-                      _buildHudColumn('DISTANCE', distStr),
+                      _buildHudColumn(
+                        'DISTANCE',
+                        distStr,
+                        icon: Icons.flag_rounded,
+                      ),
+                      _buildDivider(),
 
                       // TIME
-                      _buildHudColumn('TIME', timeStr),
+                      _buildHudColumn(
+                        'TIME',
+                        timeStr,
+                        icon: Icons.timer_outlined,
+                      ),
+                      _buildDivider(),
 
                       // MULTIPLIER
                       Column(
@@ -104,7 +118,7 @@ class GameplayHudOverlay extends StatelessWidget {
                           const Text(
                             'MULTIPLIER',
                             style: TextStyle(
-                              color: Color(0xFF78909C),
+                              color: Color(0xFF8FD9F5),
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1.0,
@@ -112,12 +126,17 @@ class GameplayHudOverlay extends StatelessWidget {
                           ),
                           const SizedBox(height: 2),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 2,
+                            ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFF8F00).withValues(alpha: 0.2),
+                              color: const Color(
+                                0xFFFFA000,
+                              ).withValues(alpha: 0.16),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
-                                color: const Color(0xFFFFB300),
+                                color: const Color(0xFFFFC107),
                                 width: 1.0,
                               ),
                             ),
@@ -129,7 +148,10 @@ class GameplayHudOverlay extends StatelessWidget {
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 1.0,
                                 shadows: [
-                                  Shadow(color: Color(0xFFFFB300), blurRadius: 10),
+                                  Shadow(
+                                    color: Color(0xFFFFB300),
+                                    blurRadius: 10,
+                                  ),
                                 ],
                               ),
                             ),
@@ -141,13 +163,17 @@ class GameplayHudOverlay extends StatelessWidget {
                       GestureDetector(
                         onTap: onPause,
                         child: Container(
-                          width: 38,
-                          height: 38,
+                          width: 42,
+                          height: 42,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: const Color(0xFF00E5FF).withValues(alpha: 0.15),
+                            color: const Color(
+                              0xFF1E6EFF,
+                            ).withValues(alpha: 0.22),
                             border: Border.all(
-                              color: const Color(0xFF00E5FF).withValues(alpha: 0.5),
+                              color: const Color(
+                                0xFF7BCBFF,
+                              ).withValues(alpha: 0.8),
                               width: 1.2,
                             ),
                           ),
@@ -175,9 +201,24 @@ class GameplayHudOverlay extends StatelessWidget {
               opacity: 0.4,
               child: Column(
                 children: const [
-                  Icon(Icons.keyboard_arrow_up, color: Color(0xFF00E5FF), size: 24),
-                  Text('DRAG', style: TextStyle(color: Color(0xFF00E5FF), fontSize: 10, fontWeight: FontWeight.bold)),
-                  Icon(Icons.keyboard_arrow_down, color: Color(0xFF00E5FF), size: 24),
+                  Icon(
+                    Icons.keyboard_arrow_up,
+                    color: Color(0xFF00E5FF),
+                    size: 24,
+                  ),
+                  Text(
+                    'DRAG',
+                    style: TextStyle(
+                      color: Color(0xFF00E5FF),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    color: Color(0xFF00E5FF),
+                    size: 24,
+                  ),
                 ],
               ),
             ),
@@ -192,9 +233,24 @@ class GameplayHudOverlay extends StatelessWidget {
               opacity: 0.4,
               child: Column(
                 children: const [
-                  Icon(Icons.keyboard_arrow_up, color: Color(0xFF00E5FF), size: 24),
-                  Text('DRAG', style: TextStyle(color: Color(0xFF00E5FF), fontSize: 10, fontWeight: FontWeight.bold)),
-                  Icon(Icons.keyboard_arrow_down, color: Color(0xFF00E5FF), size: 24),
+                  Icon(
+                    Icons.keyboard_arrow_up,
+                    color: Color(0xFF00E5FF),
+                    size: 24,
+                  ),
+                  Text(
+                    'DRAG',
+                    style: TextStyle(
+                      color: Color(0xFF00E5FF),
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    color: Color(0xFF00E5FF),
+                    size: 24,
+                  ),
                 ],
               ),
             ),
@@ -204,14 +260,23 @@ class GameplayHudOverlay extends StatelessWidget {
     );
   }
 
-  Widget _buildHudColumn(String label, String value) {
+  Widget _buildDivider() {
+    return Container(
+      width: 1,
+      height: 34,
+      color: const Color(0xFF5A8BC4).withValues(alpha: 0.42),
+    );
+  }
+
+  Widget _buildHudColumn(String label, String value, {IconData? icon}) {
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        if (icon != null) Icon(icon, color: const Color(0xFF86D9FF), size: 15),
         Text(
           label,
           style: const TextStyle(
-            color: Color(0xFF78909C),
+            color: Color(0xFF8FD9F5),
             fontSize: 10,
             fontWeight: FontWeight.w800,
             letterSpacing: 1.0,
